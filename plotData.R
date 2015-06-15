@@ -14,6 +14,67 @@ plotData <- function(train){
   legend("topleft", c("Perished","Survived"),fill=colsStandard,cex=1,pt.cex=1.5)
   dev.off()
   
+ 
+  
+  #Lets look at the fares paid for the different classes first
+  avg<-data.frame(Class=numeric(3),Fare=numeric(3),Dev=numeric(3))
+  for(i in 1:3){
+    avg$Class[i]<-i
+    avg$Fare[i]<-mean(train$Fare[train$Pclass==i])
+    avg$Dev[i]<-sd(train$Fare[train$Pclass==i])
+  }
+  
+  pdf("FarevsClass.pdf")
+  par(mar=c(5,5,5,5)+0.1)
+  title<-sprintf("Average Fares in Different Classes")
+  means <- c(avg$Fare[1],avg$Fare[2],avg$Fare[3])
+  mp <- barplot(means, axes=FALSE, axisnames=TRUE, ylim=c(0, 200),col=c("grey10", "grey40","grey80"), main="Average Fares per Class", xlab="Class", ylab="Fare")
+  axis(1, labels=c("1", "2","3"), at = mp)
+  # The y-axis with the age going from 0 to 60
+  axis(2, at=seq(0 , 200, by=5))
+  # Put the plot in a box
+  box()
+  stDevs<-c(avg$Dev[1],avg$Dev[2],avg$Dev[3])
+  segments(mp, means - stDevs, mp, means + stDevs, lwd=2)
+  segments(mp - 0.1, means - stDevs, mp + 0.1, means - stDevs, lwd=2)
+  segments(mp - 0.1, means + stDevs, mp + 0.1, means + stDevs, lwd=2)
+  dev.off()
+  
+  trainbak<-train
+  #get average Fares in the different classes
+  averageFares<-sapply(1:3, FUN=function(x) {mean(na.omit(train$Fare[train$Pclass==x]))})
+  #replace fares with average of each class?
+  for(i in 1:3)
+  {
+    train$Fare[which(((train$Fare==0)|is.na(train$Fare))&train$Pclass==i)]<-averageFares[i]
+  }
+  #Lets look at the fares paid for the different classes first
+  avg<-data.frame(Class=numeric(3),Fare=numeric(3),Dev=numeric(3))
+  for(i in 1:3){
+    avg$Class[i]<-i
+    avg$Fare[i]<-mean(train$Fare[train$Pclass==i])
+    avg$Dev[i]<-sd(train$Fare[train$Pclass==i])
+  }
+  
+  pdf("FarevsClassCleaned.pdf")
+  par(mar=c(5,5,5,5)+0.1)
+  title<-sprintf("Average Fares in Different Classes")
+  means <- c(avg$Fare[1],avg$Fare[2],avg$Fare[3])
+  mp <- barplot(means, axes=FALSE, axisnames=FALSE, ylim=c(0, 200),col=c("grey10", "grey40","grey80"), main="Average Fares per Class", xlab="Class", ylab="Fare")
+  axis(1, labels=c("1", "2","3"), at = mp)
+  # The y-axis with the age going from 0 to 60
+  axis(2, at=seq(0 , 200, by=5))
+  # Put the plot in a box
+  box()
+  stDevs<-c(avg$Dev[1],avg$Dev[2],avg$Dev[3])
+  segments(mp, means - stDevs, mp, means + stDevs, lwd=2)
+  segments(mp - 0.1, means - stDevs, mp + 0.1, means - stDevs, lwd=2)
+  segments(mp - 0.1, means + stDevs, mp + 0.1, means + stDevs, lwd=2)
+  dev.off()
+  
+  
+  
+  
   #Lets divide the ages into groups for later analysis
   
   

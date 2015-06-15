@@ -1,7 +1,6 @@
 #function that cleans the data, and adds a few features for the learning and partitioning algorithms later on
-cleanData <- function(train,test,names,ageBreaks ){
+cleanData <- function(train,test,names,ageBreaks,priceBreaks ){
 
-  
   
 test$Survived <- NA
 fullData <- rbind(train, test)
@@ -73,6 +72,9 @@ for(i in 1:17)
   fullData$Age[which(is.na(fullData$Age)&fullData$Title==titles[i])]<-ages[i]
 }
 
+#create a price feature based on the fare divisions specified in the function input
+
+#some of the passengers don't have Fares. We can use the average fare for each class as a suitable replacement for now.
 #get average Fares in the different classes
 averageFares<-sapply(1:3, FUN=function(x) {mean(na.omit(fullData$Fare[fullData$Pclass==x]))})
 #replace fares with average of each class?
@@ -80,6 +82,9 @@ for(i in 1:3)
 {
   fullData$Fare[which(((fullData$Fare==0)|is.na(fullData$Fare))&fullData$Pclass==i)]<-averageFares[i]
 }
+
+priceFeat<-cut(fullData$Fare,priceBreaks,labels=FALSE,include.lowest=TRUE)
+
 
 
 #lets try and classify the titles into either people that might be more likely to survive (i.e. rich, or respected) and those less likely to survive
@@ -102,10 +107,10 @@ fullData$TitleFeat[fullData$Title %in% c('the Countess', 'Mme', 'Mlle','Lady','M
 fullData$TitleFeat[fullData$Title %in% c('Mrs','Dona')] <- 'GoodFemale'
 #titles that appear less likely to survive than an average female
 fullData$TitleFeat[fullData$Title %in% c('Miss')] <- 'BadFemale'
-prop.table(table(fullData$TitleFeat,fullData$Survived),1)
-fullData$TitleFeat=factor(fullData$TitleFeat)
 
-#lets look at the cabin information? I'd magine the reason that there aren't fully sampled cabins is because this information was gotten from survivors?
+
+
+#lets look at the cabin information? I'd imagine the reason that there aren't fully sampled cabins is because this information was gotten from survivors?
 #First lets just separate by floor
 fullData$Cabin <-as.character(fullData$Cabin)
 fullData$CabinFeat <- sapply(fullData$Cabin, FUN=function(x) {strsplit(x, split='[ ]')[[1]][1]})
@@ -118,14 +123,21 @@ fullData$CabinFeat<-sub("F[0-9]+","F",fullData$CabinFeat)
 fullData$CabinFeat<-sub("G[0-9]+","G",fullData$CabinFeat)
 fullData$CabinFeat[is.na(fullData$CabinFeat)]<-'Unknown'
 
-
-train$AgeFeat<-cut(train$Age,ageBreaks,labels=FALSE)
-fullData2<-data.frame()
+#create a age feature based on the age divisions specified in the function input
 ageFeat<-cut(fullData$Age,ageBreaks,labels=FALSE)
-fullData2<-cbind(as.factor(fullData$Survived),as.factor(fullData$Sex),as.factor(ageFeat),as.factor(fullData$Pclass),as.factor(fullData$TitleFeat),as.factor(fullData$CabinFeat),as.factor(fullData$GroupFeat),as.factor(fullData$MFCoupleFeat),as.factor(fullData$FamilyFeat))
-colnames(fullData2)<-c("Survived","SexFeat","AgeFeat","PclassFeat","TitleFeat","CabinFeat","GroupFeat","MFCoupleFeat","FamilyFeat")
 
 
 
-return(((fullData2)))
+
+data1<-data.frame(fullData$PassengerId,fullData$Survived,fullData$Sex,fullData$Fare,fullData$Embarked,fullData$EthnicFeat,fullData$GroupFeat,fullData$MFCoupleFeat,fullData$FamilyFeat,fullData$TitleFeat,fullData$CabinFeat)
+
+fullData2<-data.frame()
+fullData2<-data.frame(as.factor(ageFeat),
+                 as.factor(priceFeat))
+colnames(fullData2)<-c("AgeFeat","PriceFeat")
+
+fullDataReturn<-data.frame(fullData,fullData2)
+#colnames(fullDataReturn)<-c("PassengerID","Survived","Sex","Fare","Embarked","EthnicFeat","GroupFeat","MFCoupleFeat","FamilyFeat","TitleFeat","CabinFeat","AgeFeat","PriceFeat")
+
+return(fullDataReturn)
 }
