@@ -44,12 +44,40 @@ for(i in 1:length(fullData$SurnameStrip)){
   
 }
 
+
+
+
+
 #Now we split the data up using the ticket numbers. Each ticket number corresponds to one group travelling together.
+#We also note that the fare variable seems to be for all the passengers travelling on a ticket. We should normalise this
+# so that it reflects a per passenger price
 ticketSplit<-split(fullData,fullData$Ticket)
 fullData$GroupFeat=NA
+fullData$FarePassenger=NA
+
 for(i in 1:length(ticketSplit))
 {
-  fullData$GroupFeat[ticketSplit[i][[1]][1]$PassengerId] = length(ticketSplit[i][[1]][1]$PassengerId)
+  #number of passengers on a ticket
+  nPassengers <- length(ticketSplit[i][[1]][1]$PassengerId)
+  #passengers IDs of the passengers on this ticket
+  passengerIDs<-ticketSplit[i][[1]][1]$PassengerId
+  #ticket Fare
+  ticketFare<-fullData$Fare[ticketSplit[i][[1]][1]$PassengerId]
+  #assign the number of people travelling on the ticket to a new feature call GroupFeat
+  fullData$GroupFeat[passengerIDs] <- nPassengers
+  #assign the ticket price normalised to a per person fare to a new feature called FarePassenger  
+  fullData$FarePassenger[passengerIDs]<-ticketFare/ nPassengers
+}
+
+
+
+#some of the passengers don't have Fares. We can use the average fare for each class as a suitable replacement for now.
+#get average Fares in the different classes
+averageFares<-sapply(1:3, FUN=function(x) {mean(na.omit(fullData$FarePassenger[fullData$Pclass==x]))})
+#replace fares with average of each class?
+for(i in 1:3)
+{
+  fullData$Fare[which(((fullData$Fare==0)|is.na(fullData$Fare))&fullData$Pclass==i)]<-averageFares[i]
 }
 
 
@@ -72,17 +100,8 @@ for(i in 1:17)
   fullData$Age[which(is.na(fullData$Age)&fullData$Title==titles[i])]<-ages[i]
 }
 
+
 #create a price feature based on the fare divisions specified in the function input
-
-#some of the passengers don't have Fares. We can use the average fare for each class as a suitable replacement for now.
-#get average Fares in the different classes
-averageFares<-sapply(1:3, FUN=function(x) {mean(na.omit(fullData$Fare[fullData$Pclass==x]))})
-#replace fares with average of each class?
-for(i in 1:3)
-{
-  fullData$Fare[which(((fullData$Fare==0)|is.na(fullData$Fare))&fullData$Pclass==i)]<-averageFares[i]
-}
-
 priceFeat<-cut(fullData$Fare,priceBreaks,labels=FALSE,include.lowest=TRUE)
 
 

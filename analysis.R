@@ -25,11 +25,22 @@ names[6:11]<-as.numeric(unlist(names[6:11]))
 
 
 #--------------------------------------------------------------------------
-#plotData(train)
+#
 #First clean the data somewhat and create a bunch of features.
 ageBreaks <- c(0,2,5,10,15,18,30,40,50,60,70,80,90)
 priceBreaks <- c(seq(from=0,by=5, to=95),seq(from=100,by=10, to=190),seq(from=200,by=20, to=540))
 #clean the data and create new features for the full set. Use the names database from US census to get a guess at ethnicity.
+#New features we create are as follows:
+#GroupFeat-> Number of passengers (including the passengers in question) travelling together
+#EthnicFeat-> Probable ethnicity of passenger (derived using the US census data of surnames)
+#FarePassenger-> The fare prices are per ticket, but many tickets are for multiple passengers. This has the ticket price normalised by the number of passengers travelling on the ticket
+#MFCoupleFeat ->Is the person travelling as a couple? Excludes people travelling with parents or children
+#FamilyFeat ->Is the person travelling in a family?
+#TitleFeat -> Looking at the data suggests that certain social classes are more likely to survive. This creates a factor based on persons title
+#CabinFeat -> If information about cabin the person was travelling in is available, then this is captured here.
+#PriceFeat -> Different price brackets
+#AgeFeat -> Different Age brackets
+
 fullData<-(cleanData(train,test,names,ageBreaks,priceBreaks))
 #clean the data and create new features for the full set.
 fullData$TitleFeat<-as.factor(fullData$TitleFeat)
@@ -45,17 +56,17 @@ fullData$EthnicFeat<-as.factor(fullData$EthnicFeat)
 trainFeat <- (fullData[1:891,])
 testFeat <- (fullData[892:1309,])
 
-
+plotData(trainFeat)
 
 #-------Create a formula that we will use for the fitting algorithms.
-formula <-Survived ~  Pclass + Sex + Fare+ Age + Embarked + EthnicFeat + TitleFeat + GroupFeat + MFCoupleFeat + FamilyFeat + CabinFeat
+formula <-Survived ~  Pclass + Sex + FarePassenger+ Age + Embarked + EthnicFeat + TitleFeat + GroupFeat + MFCoupleFeat + FamilyFeat + CabinFeat
 
 
 
 
 #--------------------Recursive Partitioning Solution------------------------------------------------------------------
 #lets explore this model a little with recursive partioning.
-formula <-Survived ~  Pclass + Sex + Fare+ Age + Embarked + EthnicFeat + TitleFeat + GroupFeat + MFCoupleFeat + FamilyFeat + CabinFeat
+formula <-Survived ~  Pclass + Sex + FarePassenger+ Age + Embarked + EthnicFeat + TitleFeat + GroupFeat + MFCoupleFeat + FamilyFeat + CabinFeat
 tunedRpart<-tune.rpart(formula, data=as.data.frame(trainFeat), minsplit = c(25,50,75,100),
            minbucket = c(10,20,30,40,50), cp = c(0,0.1,0.2,0.3,0.4,0.5), maxcompete = c(0,1), maxsurrogate = c(0,1),
            usesurrogate = c(0,1), xval = c(0,1,2,3,4))
@@ -79,6 +90,16 @@ write.csv(submit, file = "submitCJC.csv", row.names = FALSE)
 #-----------------------------------------------------------------------------------------------------
 
 #--------------------K nearest Neighbours-------------------------------------------------------------
+formula <-Survived ~  Pclass + Sex + Fare+ Age + Embarked + EthnicFeat + TitleFeat + GroupFeat + MFCoupleFeat + FamilyFeat + CabinFeat
+
+
+#Do a quick rms error study of the effect of adding additional possible clusters i.e. increasing k in the k-means algorithm
+kValsErr<-data.frame(error=numeric(30));
+for(i in (1:30)){
+  knnFit<-knn3(formula,trainFeat,k=i,, prob = FALSE)
+  fitKnn<-round(as.data.frame(predict(knnFit,trainFeat, prob = FALSE)))
+  kValsErr$error[i]<-sqrt(sum((aa<-round(fitKnn$'1') - trainFeat$Survived)^2))
+}
 
 
 
@@ -178,20 +199,27 @@ gbmFit2 <- train(formula, data = as.data.frame(trainFeat),
                  ## Now specify the exact models 
                  ## to evaludate:
                  tuneGrid = gbmGrid)
+#The final values used for the model were n.trees = 50, interaction.depth = 9, shrinkage = 0.1 and n.minobsinnode = 10. 
 
-fitBoost<-gbm(formula,data= as.data.frame(trainFeat), n.trees=20000,interaction.depth=2, distribution="gaussian")
-PredictionBoost <- predict(fitBoost, as.data.frame(trainFeat),n.trees=20000)
+fitBoost<-gbm(formula,data= as.data.frame(trainFeat), n.trees=50,interaction.depth=9, shrinkage=0.1,n.minobsinnode=10,distribution="gaussian")
+PredictionBoost <- predict(fitBoost, as.data.frame(trainFeat),n.trees=50)
 results.matrix <- confusionMatrix(round(PredictionBoost), trainFeat$Survived)
 accuracyBoost<-results.matrix$overall[1]
 
-PredictionBoost <- predict(fitBoost, newdata=as.data.frame(testFeat),n.trees=20000)
+PredictionBoost <- predict(fitBoost, newdata=as.data.frame(testFeat),n.trees=50)
 submit <- data.frame(PassengerID = testFeat$PassengerId, Survived = round(PredictionBoost))
 write.csv(submit, file = "submitCJC.csv", row.names = FALSE)
 
+#with n.trees = 20000
 #837   ↓109 	
 #Charles Copley
 #0.79426 	19 	Mon, 15 Jun 2015 18:57:13 (-9.3d)
 #Your Best Entry ↑
 #Your submission scored 0.78469, which is not an improvement of your best score. Keep trying! 
 
-
+#with n.trees = 50, interaction.depth = 9, shrinkage = 0.1 and n.minobsinnode = 10. 
+#842   ↓109 	
+#Charles Copley
+#0.79426 	22 	Tue, 16 Jun 2015 05:15:55 (-9.7d)
+#Your Best Entry ↑
+#Your submission scored 0.77512, which is not an improvement of your best score. Keep trying! 
