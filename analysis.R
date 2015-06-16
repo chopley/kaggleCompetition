@@ -53,9 +53,13 @@ formula <-Survived ~  Pclass + Sex + Fare+ Age + Embarked + EthnicFeat + TitleFe
 
 
 
-#------------------------------------------------------------------------------------------------------
+#--------------------Recursive Partitioning Solution------------------------------------------------------------------
 #lets explore this model a little with recursive partioning.
-fit <- rpart(formula, data=as.data.frame(trainFeat), method="class",control=rpart.control(minsplit=50,cp=0))
+formula <-Survived ~  Pclass + Sex + Fare+ Age + Embarked + EthnicFeat + TitleFeat + GroupFeat + MFCoupleFeat + FamilyFeat + CabinFeat
+tunedRpart<-tune.rpart(formula, data=as.data.frame(trainFeat), minsplit = c(25,50,75,100),
+           minbucket = c(10,20,30,40,50), cp = c(0,0.1,0.2,0.3,0.4,0.5), maxcompete = c(0,1), maxsurrogate = c(0,1),
+           usesurrogate = c(0,1), xval = c(0,1,2,3,4))
+fit <- rpart(formula, data=as.data.frame(trainFeat), method="class",control=rpart.control(minsplit=100,cp=0,minbucket=10,maxcompete=0,maxsurrogate=0,usesurrogate=0,xval=0))
 Prediction <- predict(fit, as.data.frame(trainFeat), type = "class")
 results.matrix <- confusionMatrix(Prediction, trainFeat$Survived)
 accuracyRpart<-results.matrix$overall[1]
@@ -67,13 +71,19 @@ PredictionRpart <- predict(fit, as.data.frame(testFeat), type = "class")
 submit <- data.frame(PassengerID = testFeat$PassengerId, Survived = (PredictionRpart))
 write.csv(submit, file = "submitCJC.csv", row.names = FALSE)
 
-#836   ↓108 	
+#842   ↓110 	
 #Charles Copley
-#0.79426 	17 	Mon, 15 Jun 2015 18:23:33 (-9.3d)
+#0.79426 	21 	Tue, 16 Jun 2015 04:50:39 (-9.7d)
 #Your Best Entry ↑
-#Your submission scored 0.76555, which is not an improvement of your best score. Keep trying! 
+#Your submission scored 0.79426, which is not an improvement of your best score. Keep trying! 
 #-----------------------------------------------------------------------------------------------------
 
+#--------------------K nearest Neighbours-------------------------------------------------------------
+
+
+
+
+#-------------------Support Vector Machine Solution---------------------------------------------------
 formula <-Survived ~  Pclass + Sex + Fare+ Age + Embarked + EthnicFeat + TitleFeat + GroupFeat + MFCoupleFeat + FamilyFeat + CabinFeat
 #find the best SVM gamma and cost parameters
 tuned <- tune.svm(formula, data=trainFeat, gamma = 10^(-3:3), cost = 10^(-2:4))
@@ -98,8 +108,10 @@ write.csv(submit, file = "submitCJC.csv", row.names = FALSE)
 #0.79426 	15 	Mon, 15 Jun 2015 18:18:22 (-9.3d)
 #Your Best Entry ↑
 #Your submission scored 0.79426, which is not an improvement of your best score. Keep trying! 
+#-----------------------------------------------------------------------------------------------------------
 
-#---------------------------------------------------------------------------------------------------
+
+#------------------------Neural Network Solution------------------------------------------------------------
 formula <-Survived ~  Pclass + Sex + Fare+ Age + Embarked + EthnicFeat + TitleFeat + GroupFeat + MFCoupleFeat + FamilyFeat + CabinFeat
 #find the best neural network
 tuned <- tune.nnet(formula, data=trainFeat, size=c(5,10,15,30),decay=c(0,0.005,0.010),MaxNWts= 20000)
@@ -120,7 +132,11 @@ write.csv(submit, file = "submitCJC.csv", row.names = FALSE)
 #0.79426 	18 	Mon, 15 Jun 2015 18:42:49 (-9.3d)
 #Your Best Entry ↑
 #Your submission scored 0.78947, which is not an improvement of your best score. Keep trying! 
-#----------------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------------------
+
+
+
+#-------------------------Random Forest Solution---------------------------------------------------------------
 formula <-Survived ~  Pclass + Sex + Fare+ Age + Embarked + EthnicFeat + TitleFeat + GroupFeat + MFCoupleFeat + FamilyFeat + CabinFeat
 trainFeatForest<-trainFeat
 testFeatForest<-testFeat
@@ -142,9 +158,27 @@ write.csv(submit, file = "submitCJC.csv", row.names = FALSE)
 #0.79426 	20 	Mon, 15 Jun 2015 19:17:13 (-9.3d)
 #Your Best Entry ↑
 #Your submission scored 0.77512, which is not an improvement of your best score. Keep trying! 
+#-----------------------------------------------------------------------------------------------------------
 
-#-----------------------------------------------
-#use gradient boost algorithm for classification
+
+
+#-----------------------------generalized boost regression------------------------------------------------------------------------
+#use generalized boost regression algorithm for classification
+fitControl <- trainControl(method = "repeatedcv",number = 10,repeats = 10)
+#expand the parameter search grid
+gbmGrid <-  expand.grid(interaction.depth = c(1, 5, 9),
+                        n.trees = (1:30)*50,
+                        shrinkage = 0.1,
+                        n.minobsinnode = 10)
+set.seed(1)
+gbmFit2 <- train(formula, data = as.data.frame(trainFeat),
+                 method = "gbm",
+                 trControl = fitControl,
+                 verbose = FALSE,
+                 ## Now specify the exact models 
+                 ## to evaludate:
+                 tuneGrid = gbmGrid)
+
 fitBoost<-gbm(formula,data= as.data.frame(trainFeat), n.trees=20000,interaction.depth=2, distribution="gaussian")
 PredictionBoost <- predict(fitBoost, as.data.frame(trainFeat),n.trees=20000)
 results.matrix <- confusionMatrix(round(PredictionBoost), trainFeat$Survived)
