@@ -41,6 +41,7 @@ priceBreaks <- c(seq(from=0,by=5, to=95),seq(from=100,by=10, to=190),seq(from=20
 #PriceFeat -> Different price brackets
 #AgeFeat -> Different Age brackets
 
+
 fullData<-(cleanData(train,test,names,ageBreaks,priceBreaks))
 #clean the data and create new features for the full set.
 fullData$TitleFeat<-as.factor(fullData$TitleFeat)
@@ -90,7 +91,7 @@ write.csv(submit, file = "submitCJC.csv", row.names = FALSE)
 #-----------------------------------------------------------------------------------------------------
 
 #--------------------K nearest Neighbours-------------------------------------------------------------
-formula <-Survived ~  Pclass + Sex + Fare+ Age + Embarked + EthnicFeat + TitleFeat + GroupFeat + MFCoupleFeat + FamilyFeat + CabinFeat
+formula <-Survived ~  Pclass + Sex + FarePassenger+ Age + Embarked + EthnicFeat + TitleFeat + GroupFeat + MFCoupleFeat + FamilyFeat + CabinFeat
 
 
 #Do a quick rms error study of the effect of adding additional possible clusters i.e. increasing k in the k-means algorithm
@@ -105,7 +106,7 @@ for(i in (1:30)){
 
 
 #-------------------Support Vector Machine Solution---------------------------------------------------
-formula <-Survived ~  Pclass + Sex + Fare+ Age + Embarked + EthnicFeat + TitleFeat + GroupFeat + MFCoupleFeat + FamilyFeat + CabinFeat
+formula <-Survived ~  Pclass + Sex + FarePassenger+ Age + Embarked + EthnicFeat + TitleFeat + GroupFeat + MFCoupleFeat + FamilyFeat + CabinFeat
 #find the best SVM gamma and cost parameters
 tuned <- tune.svm(formula, data=trainFeat, gamma = 10^(-3:3), cost = 10^(-2:4))
 fitSVM  <- svm(formula, data = as.data.frame(trainFeat), 
@@ -133,7 +134,7 @@ write.csv(submit, file = "submitCJC.csv", row.names = FALSE)
 
 
 #------------------------Neural Network Solution------------------------------------------------------------
-formula <-Survived ~  Pclass + Sex + Fare+ Age + Embarked + EthnicFeat + TitleFeat + GroupFeat + MFCoupleFeat + FamilyFeat + CabinFeat
+formula <-Survived ~  Pclass + Sex + FarePassenger+ Age + Embarked + EthnicFeat + TitleFeat + GroupFeat + MFCoupleFeat + FamilyFeat + CabinFeat
 #find the best neural network
 tuned <- tune.nnet(formula, data=trainFeat, size=c(5,10,15,30),decay=c(0,0.005,0.010),MaxNWts= 20000)
 fitNnet <- svm(formula, data = as.data.frame(trainFeat), 
@@ -158,7 +159,7 @@ write.csv(submit, file = "submitCJC.csv", row.names = FALSE)
 
 
 #-------------------------Random Forest Solution---------------------------------------------------------------
-formula <-Survived ~  Pclass + Sex + Fare+ Age + Embarked + EthnicFeat + TitleFeat + GroupFeat + MFCoupleFeat + FamilyFeat + CabinFeat
+formula <-Survived ~  Pclass + Sex + FarePassenger+ Age + Embarked + EthnicFeat + TitleFeat + GroupFeat + MFCoupleFeat + FamilyFeat + CabinFeat
 trainFeatForest<-trainFeat
 testFeatForest<-testFeat
 trainFeatForest$Survived<-as.factor(trainFeatForest$Survived)
@@ -184,6 +185,7 @@ write.csv(submit, file = "submitCJC.csv", row.names = FALSE)
 
 
 #-----------------------------generalized boost regression------------------------------------------------------------------------
+formula <-Survived ~  Pclass + Sex + FarePassenger+ Age + Embarked + EthnicFeat + TitleFeat + GroupFeat + MFCoupleFeat + FamilyFeat + CabinFeat
 #use generalized boost regression algorithm for classification
 fitControl <- trainControl(method = "repeatedcv",number = 10,repeats = 10)
 #expand the parameter search grid
@@ -206,7 +208,7 @@ PredictionBoost <- predict(fitBoost, as.data.frame(trainFeat),n.trees=50)
 results.matrix <- confusionMatrix(round(PredictionBoost), trainFeat$Survived)
 accuracyBoost<-results.matrix$overall[1]
 
-PredictionBoost <- predict(fitBoost, newdata=as.data.frame(testFeat),n.trees=50)
+PredictionBoost <- predict(fitBoost, newdata=as.data.frame(testFeat),n.trees=50,interaction.depth=9, shrinkage=0.1,n.minobsinnode=10,distribution="gaussian")
 submit <- data.frame(PassengerID = testFeat$PassengerId, Survived = round(PredictionBoost))
 write.csv(submit, file = "submitCJC.csv", row.names = FALSE)
 

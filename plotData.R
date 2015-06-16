@@ -93,8 +93,7 @@ plotData <- function(train){
   
   #Lets divide the ages into groups for later analysis
   
-  
-  #plot the women survival
+#--------------------------------------plot the women aggregate survival-------------------------------
   pdf("SurvivalBySexFemale.pdf")
   par(mar=c(0,1,3,1)+0.1)
   female<-split(train,train$Sex=='female')
@@ -106,7 +105,7 @@ plotData <- function(train){
   legend("topleft", c("Perished","Survived"),fill=colsStandard,cex=1,pt.cex=1.5)
   dev.off()
   
-  #plot the male aggregate survival
+#---------------------------------------plot the male aggregate survival--------------------------------
   pdf("SurvivalBySexMale.pdf")
   par(mar=c(0,1,3,1)+0.1)
   male<-split(train,train$Sex=='male')
@@ -119,7 +118,7 @@ plotData <- function(train){
   dev.off()
   
   
-  #plot the male survival by class
+#----------------------------plot the male survival by class----------------------------------------
   MaleSurvival<-data.frame(class=c("First","Second","Third"),survived=numeric(3),perished=numeric(3))
   
   for (i in 1:3){
@@ -141,10 +140,8 @@ plotData <- function(train){
   ggsave("MaleClassSurvival.pdf", plot = tt)
 
   
-  #plot the male survival by class
+#-------------------------------plot the female survival by class---------------------------------------
   FemaleSurvival<-data.frame(class=c("First","Second","Third"),survived=numeric(3),perished=numeric(3))
-  
-  #plot the female survival by class
   for (i in 1:3){
     filename<-sprintf("FemaleSurvival_Class=%d.pdf",i)
     pdf(filename)
@@ -160,32 +157,30 @@ plotData <- function(train){
     legend("topleft", c("Perished","Survived"),fill=colsStandard,cex=1,pt.cex=1.5)
     dev.off()
   }
-  
-  
-  
 
   tt<-qplot(FemaleSurvival$class,FemaleSurvival$survived,xlab='Class',ylab='Survival [%]',main='Female Survival By Class')
   ggsave("FemaleClassSurvival.pdf", plot = tt)
-  
+
+#------------------------plot survival by passenger fare- ----------------------------------
   #Lets look at the fare paid
-  #pdf("FareSurvival_bothSexes.pdf")
+  #plot the Survival of both sexes as a function of the fare price paid per passenger
   fareBreaks<-seq(from=0,to=520,by=10)
   fareFeat<-cut(train$FarePassenger,fareBreaks,labels=FALSE,include.lowest = TRUE)  
   aa<-as.data.frame(prop.table(table(train$Survived==1,fareFeat),2))
   survivedStats<-aa[aa$Var1==TRUE,]
-  tt<-qplot(fareBreaks[survivedStats$fareFeat],survivedStats$Freq*100,xlab='Fare',ylab='Survival [%]',main='Survival By Fare')
+  tt<-qplot(fareBreaks[survivedStats$fareFeat],survivedStats$Freq*100,xlab='Fare',ylab='Survival [%]',main='Survival By Fare')+geom_smooth(method=lm)
   ggsave("FareSurvival_bothSexes.pdf", plot = tt)
+
+#-------------------------plot the Survival of different titles --------------------------------------
+  pdf("titleVsSurvival.pdf",width=10,height=5)
+  titleSurvival<-prop.table(table(train$TitleFeat,train$Survived),1)
+  barplot(titleSurvival[,2]*100,main='Survival Rates of People with Different Titles',width=2,ylab='Survival[%]',xlab='Title Group')
+  dev.off()
+
   
-  #dev.off()
-  
-  
-  
-  #plot the male survival by class
- # FemaleSurvivalAge<-data.frame(class=numeric(length(ageBreaks)),survived=numeric(length(ageBreaks)),numeric(length(ageBreaks)))
-#  MaleSurvivalAge<-data.frame(class=numeric(length(ageBreaks)),survived=numeric(length(ageBreaks)),numeric(length(ageBreaks)))
-#  AllSurvivalAge<-as.data.frame(prop.table(table(train$Survived,train$AgeFeat)))
- 
-  
+#------------------------------------------------------------------------------------------
+  #plot the survival rates by age across the Titanic
+
   ageBreaks<-seq(from=0,to=100,by=2)
   ageFeat<-cut(train$Age,ageBreaks,labels=FALSE,include.lowest = TRUE)  
   aa<-as.data.frame(prop.table(table(train$Survived==1,ageFeat),2))
@@ -193,8 +188,8 @@ plotData <- function(train){
   tt<-qplot(ageBreaks[survivedStats$ageFeat],survivedStats$Freq*100,xlab='Age',ylab='Survival [%]',main='Survival By Age')
   ggsave("AgeSurvival_bothSexes.pdf", plot = tt)
 
-
-  
+#------------------------------------------------------------------------------------------
+  #split the data by gender, and plot the survival rates by age of the different genders
   genderSplit<-split(train,train$Sex=='male')
   male<-as.data.frame(genderSplit$'TRUE')
   female<-as.data.frame(genderSplit$'FALSE')
@@ -213,7 +208,7 @@ plotData <- function(train){
   ggsave("AgeSurvival_female.pdf", plot = tt)
 
 
-  #plot the survival by age
+#--------------------------------plot the survival by age-------------------------------------------------
   for (i in 2:length(ageBreaks)){
     if(length(which(train$AgeFeat==i))>0){
       n<-length(which(train$AgeFeat==i))
@@ -255,6 +250,49 @@ plotData <- function(train){
       dev.off()
     }
   }
-  
-  
+#-----------------------------Plot the ethnicities and survival rates on board Titanic------------------------------------------------------------------------------  
+
+PassengerPercentages<-100*table(train$EthnicFeat)/length(train$EthnicFeat)
+
+pdf('PassengerEthnicity.pdf',width=10,height=5)
+barplot(PassengerPercentages,xlab='Ethnicity',ylab='% Total Passengers',main='Ethnicities onboard Titanic')
+dev.off()
+
+PassengerSurvivalPercentages<-as.data.frame(prop.table(table(train$EthnicFeat,train$Survived),1))
+EthnicSurvivalRates<-PassengerSurvivalPercentages$Freq[PassengerSurvivalPercentages$Var2==1]
+
+pdf('SurvivalByEthnicity.pdf',width=10,height=5)
+barplot(100*EthnicSurvivalRates,names=c("asian","hispanic","unknown","white"),xlab='Ethnicity',ylab="Survival Rate [%]",main="Survival By Ethnicity")
+dev.off()       
+#-----------------------------Plot the  survival rate by cabin on board Titanic------------------------------------------------------------------------------  
+
+CabinPercentages<-100*table(train$CabinFeat)/length(train$CabinFeat)
+
+pdf('CabinLocations.pdf',width=10,height=5)
+barplot(CabinPercentages,xlab='Cabin',ylab='% Total Passengers',main='Passenger Cabin Information')
+dev.off()
+
+CabinSurvivalPercentages<-as.data.frame(prop.table(table(train$CabinFeat,train$Survived),1))
+CabinSurvivalRates<-CabinSurvivalPercentages$Freq[CabinSurvivalPercentages$Var2==1]
+
+pdf('SurvivalByCabin.pdf',width=10,height=5)
+barplot(100*CabinSurvivalRates,names=c("A","B","C","D","E","F","G","T","Unknown"),xlab='Cabin',ylab="Survival Rate [%]",main="Survival By Cabin")
+dev.off()      
+
+#-----------------------------Plot the  survival rate by size of group------------------------------------------------------------------------------  
+GroupSurvivalPercentages<-as.data.frame(prop.table(table(train$GroupFeat,train$Survived),1))
+GroupSurvivalRates<-GroupSurvivalPercentages$Freq[GroupSurvivalPercentages$Var2==1]
+
+pdf('SurvivalByGroup.pdf',width=10,height=5)
+barplot(100*GroupSurvivalRates,names=c("1","2","3","4","5","6","7","8","11"),xlab='Group Size',ylab="Survival Rate [%]",main="Survival By Group Size")
+dev.off() 
+
+#-----------------------------Plot the  survival rate by couple------------------------------------------------------------------------------  
+CoupleSurvivalPercentages<-as.data.frame(prop.table(table(train$MFCoupleFeat,train$Survived),1))
+CoupleSurvivalRates<-CoupleSurvivalPercentages$Freq[CoupleSurvivalPercentages$Var2==1]
+
+pdf('SurvivalByMFCouple.pdf',width=10,height=5)
+barplot(100*CoupleSurvivalRates,names=c("No","Yes"),xlab='Male/Female Couple?',ylab="Survival Rate [%]",main="Survival By Couples")
+dev.off() 
+
 }
